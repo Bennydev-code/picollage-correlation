@@ -95,26 +95,25 @@ if __name__ == '__main__':
         train_loss = total_loss / len(train_loader)
         wandb.log({"train_loss": train_loss, "epoch": epoch + 1})
         tqdm.write(f"[Epoch {epoch+1}] Train Loss: {train_loss:.4f}")
+
+        model.eval()
+        total_test_loss = 0.0
+        preds_list, trues_list = [], []
     
+        with torch.no_grad():
+            for X_batch, y_batch in test_loader:
+                X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+                preds = model(X_batch)
+                loss = criterion(preds, y_batch)
+                total_test_loss += loss.item()
+                preds_list.append(preds.cpu())
+                trues_list.append(y_batch.cpu())
+    
+        test_preds = torch.cat(preds_list).numpy()
+        test_trues = torch.cat(trues_list).numpy()
+        test_mse = ((test_preds - test_trues)**2).mean()
+        wandb.log({"test_mse": test_mse})
+        print(f"Test MSE: {test_mse:.4f}")
+        
     torch.save(model.state_dict(), "model.pth")
-
-    model.eval()
-    total_test_loss = 0.0
-    preds_list, trues_list = [], []
-
-    with torch.no_grad():
-        for X_batch, y_batch in test_loader:
-            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
-            preds = model(X_batch)
-            loss = criterion(preds, y_batch)
-            total_test_loss += loss.item()
-            preds_list.append(preds.cpu())
-            trues_list.append(y_batch.cpu())
-
-    test_preds = torch.cat(preds_list).numpy()
-    test_trues = torch.cat(trues_list).numpy()
-    test_mse = ((test_preds - test_trues)**2).mean()
-    wandb.log({"test_mse": test_mse})
-    print(f"Test MSE: {test_mse:.4f}")
-
     wandb.finish()
